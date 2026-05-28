@@ -1,10 +1,19 @@
 import { Menu } from 'lucide-react'
 import { useState } from 'react'
-import {Link, useLocation} from 'react-router-dom'
+import {Link, useLocation, useNavigate} from 'react-router-dom'
+import { useAuth } from '../Context/AuthContext'
 
 export default function AdminLayout({children}){
     const location = useLocation()
     const [side, setSide] = useState(true)
+    const {logout} = useAuth()
+    const navigate = useNavigate()
+
+    const token = localStorage.getItem('token')
+
+    if(!token){
+        navigate('/home')
+    }
     
     const openSide = () => {
         setSide(!side)
@@ -49,9 +58,7 @@ export default function AdminLayout({children}){
                             <div className="flex items-center justify-center w-full">
                                 <div className="h-0.5 w-full bg-[#47455b]"></div>
                             </div>
-                            <Link to={'/home'}>
-                                <button className='bg-[#b74e4e] hover:bg-[#b95e5e] p-1 px-2 rounded-md transition-all text-white w-full'>Logout</button>
-                            </Link>
+                                <button className='bg-[#b74e4e] hover:bg-[#b95e5e] p-1 px-2 rounded-md transition-all text-white w-full' onClick={()=> logout()}>Logout</button>
                         </div>
                     </>
                     : ''}
@@ -93,7 +100,7 @@ export default function AdminLayout({children}){
             
 
             <main className={`${side ? 'ml-40' : 'ml-0'} bg-[#3a384f] flex-1 transition-all overflow-hidden`}>
-                <div className='h-full mx-4 bg-white rounded-2xl p-4 overflow-auto'>
+                <div className='h-full mx-4 bg-white rounded-2xl p-4 overflow-auto no-scrollbar'>
                     {children}
                 </div>
             </main>

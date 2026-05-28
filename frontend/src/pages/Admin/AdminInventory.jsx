@@ -2,26 +2,172 @@ import { Edit, Plus, Trash, X } from "lucide-react"
 import AdminLayout from "../../layouts/AdminLayout"
 import Modal from "../../Modal/Modal"
 import {Link} from 'react-router-dom'
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import api from "../../lib/api"
 
 export default function AdminInventory(){
+    const [inventorys, setInventorys] = useState([])
+    const [loading, setLoading] = useState(false)
+
+    async function fetchAllInventory() {
+        setLoading(true)
+        try{
+            const res = await api.get('/inventory')
+            setInventorys(res.data.inventories)
+        }finally{
+            setLoading(false)
+        }
+    }
+
+    useEffect(()=>{
+        fetchAllInventory()
+    }, [])
+
+
+    //Create
+    const [formCreate, setFormCreate] = useState({
+        room_id: '',
+        name: '',
+        description: '',
+        quantity: '',
+        status: '',
+    })
+    const [errorCreate, setErrorCreate] = useState({})
     const [create, setCreate] = useState(false)
     
     const openCreate = () => {
         setCreate(!create)
+        setFormCreate('')
+        setErrorCreate('')
     }
 
+    async function handleCreate(e) {
+        e.preventDefault()
+        setErrorCreate({})
+        setLoading(true)
+        try{
+            await api.post('/inventory', {
+                room_id: formCreate.room_id,
+                name: formCreate.name,
+                description: formCreate.description,
+                quantity: formCreate.quantity,
+                status: formCreate.status,
+            })
+            openCreate()
+            fetchAllInventory()
+        }catch(err){
+            if(err.response.status == 422){
+                setErrorCreate(err.response.data.errors)
+            }
+        }finally{
+            setLoading(false)
+        }
+    }
+    
+
+    //Edit
+    const [inventoryid, setInventoryid] = useState('')
+    const [formEdit, setFormEdit] = useState({
+        room_id: '',
+        name: '',
+        description: '',
+        quantity: '',
+        status: '',
+    })
+    const [errorEdit, setErrorEdit] = useState({})
     const [edit, setEdit] = useState(false)
     
-    const openEdit = () => {
+    const openEdit = (id) => {
         setEdit(!edit)
+        setInventoryid(id)
+        setFormEdit('')
+        setErrorEdit('')
     }
 
+    async function fetchInventory() {
+        setLoading(true)
+        try{
+            const res = await api.get(`/inventory/${inventoryid}`)
+            setFormEdit(res.data.inventory)
+        }finally{
+            setLoading(false)
+        }
+    }
+
+    useEffect(()=>{
+        if(inventoryid){
+            fetchInventory()
+        }
+    }, [inventoryid])
+
+    async function handleEdit(e) {
+        e.preventDefault()
+        setErrorEdit({})
+        setLoading(true)
+        try{
+            await api.put(`/inventory/${inventoryid}`, {
+                room_id: formEdit.room_id,
+                name: formEdit.name,
+                description: formEdit.description,
+                quantity: formEdit.quantity,
+                status: formEdit.status,
+            })
+            openEdit()
+            fetchAllInventory()
+        }catch(err){
+            if(err.response.status == 422){
+                setErrorEdit(err.response.data.errors)
+            }
+        }finally{
+            setLoading(false)
+        }
+    }
+    
+    //Delete
     const [del, setDelete] = useState(false)
     
-    const openDelete = () => {
+    const openDelete = (id) => {
         setDelete(!del)
+        setInventoryid(id)
     }
+
+    async function handleDelete() {
+        setLoading(true)
+        try{
+            await api.delete(`/inventory/${inventoryid}`)
+            openDelete()
+            fetchAllInventory()
+        }finally{
+            setLoading(false)
+        }
+    }
+
+    //Search
+    const [search, setSearch] = useState('')
+
+    const putSearch = (e) =>(
+        setSearch(e.target.value)
+    )
+
+    const filter = inventorys.filter((inventory)=>(
+        inventory.name.toLowerCase().includes(search.toLocaleLowerCase())
+    ))
+
+    //Room
+    const [rooms, setRooms]= useState([])
+
+    async function fetchRoom() {
+        try{
+            const res = await api.get('/room')
+            setRooms(res.data.rooms)
+        }finally{
+
+        }
+    }
+
+    useEffect(()=>{
+        fetchRoom()
+    }, [])
 
     return (
         <AdminLayout>
@@ -38,34 +184,42 @@ export default function AdminInventory(){
                             </button>
                         </div>
                     </div>
-                    <form action="" className="gap-4 flex flex-col w-100">
+                    <form action="" className="gap-4 flex flex-col w-100" onSubmit={handleCreate}>
                         <div className="flex flex-col gap-2">
-                            <label htmlFor="" className="font-semibold">Room:</label>
-                            <select name="" id=""className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]">
-                                <option value="" selected disabled>Select Room</option>
+                            <label htmlFor="" className="font-semibold">Inventory:</label>
+                            <select name="" id=""className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]" onChange={e => setFormCreate({...formCreate, room_id:e.target.value})}>
+                                <option value="" selected disabled>Select Inventory</option>
+                                {rooms.map((room)=>(
+                                    <option value={room.id}>{room.name}</option>
+                                ))}
                             </select>
+                            {errorCreate.room_id && <p className="text-red-500">{errorCreate.room_id[0]}</p>}
                         </div>
                         <div className="flex flex-col gap-2">
                             <label htmlFor="" className="font-semibold">Name:</label>
-                            <input type="text"placeholder="Enter name" className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]"/>
+                            <input type="text"placeholder="Enter name" className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]"onChange={e => setFormCreate({...formCreate, name:e.target.value})}/>
+                            {errorCreate.name && <p className="text-red-500">{errorCreate.name[0]}</p>}
                         </div>
                         <div className="flex flex-col gap-2">
                             <label htmlFor="" className="font-semibold">Description:</label>
-                            <input type="text"placeholder="Enter description" className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]"/>
+                            <input type="text"placeholder="Enter description" className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]"onChange={e => setFormCreate({...formCreate, description:e.target.value})}/>
+                            {errorCreate.description && <p className="text-red-500">{errorCreate.description[0]}</p>}
                         </div>
                         <div className="flex flex-col gap-2">
                             <label htmlFor="" className="font-semibold">Quantity:</label>
-                            <input type="number" min={1} placeholder="Enter quantity" className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]"/>
+                            <input type="number" min={1} placeholder="Enter quantity" className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]"onChange={e => setFormCreate({...formCreate, quantity:e.target.value})}/>
+                            {errorCreate.quantity && <p className="text-red-500">{errorCreate.quantity[0]}</p>}
                         </div>
                         <div className="flex flex-col gap-2">
                             <label htmlFor="" className="font-semibold">Status:</label>
-                            <select name="" id=""className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]">
+                            <select name="" id=""className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]" onChange={e => setFormCreate({...formCreate, status:e.target.value})}>
                                 <option value="" selected disabled>Select Status</option>
-                                <option value="" >Occupied</option>
-                                <option value="" >Not Occupied</option>
+                                <option value="Occupied" >Occupied</option>
+                                <option value="Not Occupied" >Not Occupied</option>
                             </select>
+                            {errorCreate.status && <p className="text-red-500">{errorCreate.status[0]}</p>}
                         </div>
-                            <button className='bg-[#47455b] hover:bg-[#525068] mt-6 p-3 px-3 rounded-md transition-all text-white w-full' onClick={()=> openCreate()}>Create</button>
+                            <button className='bg-[#47455b] hover:bg-[#525068] mt-6 p-3 px-3 rounded-md transition-all text-white w-full' >Create</button>
                     </form>
                 </div>
             </Modal> : ''}
@@ -83,34 +237,42 @@ export default function AdminInventory(){
                             </button>
                         </div>
                     </div>
-                    <form action="" className="gap-4 flex flex-col w-100">
-                    <div className="flex flex-col gap-2">
-                            <label htmlFor="" className="font-semibold">Room:</label>
-                            <select name="" id=""className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]">
-                                <option value="" selected disabled>Select Room</option>
+                    <form action="" className="gap-4 flex flex-col w-100" onSubmit={handleEdit}>
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="" className="font-semibold">Inventory:</label>
+                            <select name="" id=""className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]" onChange={e => setFormEdit({...formEdit, room_id:e.target.value})}>
+                                <option value="" selected disabled>Select Inventory</option>
+                                {rooms.map((room)=>(
+                                    <option value={room.id} selected={formEdit.room_id == room.id}>{room.name}</option>
+                                ))}
                             </select>
+                            {errorEdit.room_id && <p className="text-red-500">{errorEdit.room_id[0]}</p>}
                         </div>
                         <div className="flex flex-col gap-2">
                             <label htmlFor="" className="font-semibold">Name:</label>
-                            <input type="text"placeholder="Enter name" className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]"/>
+                            <input type="text" value={loading ? 'Loading' : formEdit?.name} placeholder="Enter name" className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]"onChange={e => setFormEdit({...formEdit, name:e.target.value})}/>
+                            {errorEdit.name && <p className="text-red-500">{errorEdit.name[0]}</p>}
                         </div>
                         <div className="flex flex-col gap-2">
                             <label htmlFor="" className="font-semibold">Description:</label>
-                            <input type="text"placeholder="Enter description" className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]"/>
+                            <input type="text" value={loading ? 'Loading' : formEdit?.description} placeholder="Enter description" className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]"onChange={e => setFormEdit({...formEdit, description:e.target.value})}/>
+                            {errorEdit.description && <p className="text-red-500">{errorEdit.description[0]}</p>}
                         </div>
                         <div className="flex flex-col gap-2">
                             <label htmlFor="" className="font-semibold">Quantity:</label>
-                            <input type="number" min={1} placeholder="Enter quantity" className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]"/>
+                            <input type="number" value={loading ? 'Loading' : formEdit?.quantity} min={1} placeholder="Enter quantity" className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]"onChange={e => setFormEdit({...formEdit, quantity:e.target.value})}/>
+                            {errorEdit.quantity && <p className="text-red-500">{errorEdit.quantity[0]}</p>}
                         </div>
                         <div className="flex flex-col gap-2">
                             <label htmlFor="" className="font-semibold">Status:</label>
-                            <select name="" id=""className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]">
+                            <select name="" id=""className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]" onChange={e => setFormEdit({...formEdit, status:e.target.value})}>
                                 <option value="" selected disabled>Select Status</option>
-                                <option value="" >Occupied</option>
-                                <option value="" >Not Occupied</option>
+                                <option value="Occupied" selected={formEdit.status == 'Occupied'}>Occupied</option>
+                                <option value="Not Occupied" selected={formEdit.status == 'Not Occupied'}>Not Occupied</option>
                             </select>
+                            {errorEdit.status && <p className="text-red-500">{errorEdit.status[0]}</p>}
                         </div>
-                            <button className='bg-[#47455b] hover:bg-[#525068] mt-6 p-3 px-3 rounded-md transition-all text-white w-full' onClick={()=> openEdit()}>Save</button>
+                            <button className='bg-[#47455b] hover:bg-[#525068] mt-6 p-3 px-3 rounded-md transition-all text-white w-full' >Save</button>
                     </form>
                 </div>
             </Modal> : ''}
@@ -132,7 +294,7 @@ export default function AdminInventory(){
                         <p className="font-semibold">Are you sure you want to delete?</p>
                     </div>
                     <div className="flex gap-2">
-                        <button className='bg-[#a84444] hover:bg-[#ba5656] mt-6 p-2 px-3 rounded-md transition-all text-white w-full' onClick={()=> openDelete()}>Delete</button>
+                        <button className='bg-[#a84444] hover:bg-[#ba5656] mt-6 p-2 px-3 rounded-md transition-all text-white w-full' onClick={()=> handleDelete(inventoryid)}>Delete</button>
                         <button className='bg-[#47455b] hover:bg-[#525068] mt-6 p-2 px-3 rounded-md transition-all text-white w-full' onClick={()=> openDelete()}>Cancel</button>
                     </div>
                 </div>
@@ -151,13 +313,13 @@ export default function AdminInventory(){
                     </div>
                     
                     <div className="flex gap-2">
-                        <input type="text" placeholder="Search..." className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]"/>
+                        <input type="text" placeholder="Search..." className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]" value={search} onChange={putSearch}/>
                         <button className='bg-[#47455b] hover:bg-[#525068] p-2 px-3 rounded-md transition-all' onClick={()=> openCreate()}>
                             <Plus className="text-white"/>
                         </button>
                     </div>
                 </div>
-                <div className="mt-4 border-2 border-[#3a384f]">
+                <div className="mt-4 border-2 border-[#3a384f] overflow-auto">
                     <table className="w-full">
                         <thead className="border-b-2 border-[#3a384f] bg-[#6a6981] text-[#323047]">
                             <tr>
@@ -170,26 +332,28 @@ export default function AdminInventory(){
                                 <th >Action</th>
                             </tr>
                         </thead>
-                        <tbody className="border-b-2 border-[#3a384f]">
-                            <tr>
-                                <td className="border-r-2 border-[#3a384f] p-1">No</td>
-                                <td className="border-r-2 border-[#3a384f] p-1">username</td>
-                                <td className="border-r-2 border-[#3a384f] p-1">email</td>
-                                <td className="border-r-2 border-[#3a384f] p-1">email</td>
-                                <td className="border-r-2 border-[#3a384f] p-1">email</td>
-                                <td className="border-r-2 border-[#3a384f] p-1">created at</td>
-                                <td className="w-20">
-                                    <div className="flex p-1 gap-2">
-                                        <button className='bg-[#445aa8] hover:bg-[#566cba] p-1 px-2 rounded-md transition-all' onClick={()=> openEdit()}>
-                                            <Edit className="text-white"/>
-                                        </button>
+                        <tbody >
+                            {filter.map((inven, index)=>(
+                                <tr className="border-b-2 border-[#3a384f]" key={inven.id}>
+                                    <td className="border-r-2 border-[#3a384f] p-1">{index + 1}</td>
+                                    <td className="border-r-2 border-[#3a384f] p-1">{inven.room.name}</td>
+                                    <td className="border-r-2 border-[#3a384f] p-1">{inven.name}</td>
+                                    <td className="border-r-2 border-[#3a384f] p-1">{inven.description}</td>
+                                    <td className="border-r-2 border-[#3a384f] p-1">{inven.quantity}</td>
+                                    <td className="border-r-2 border-[#3a384f] p-1">{inven.status}</td>
+                                    <td className="w-20">
+                                        <div className="flex p-1 gap-2">
+                                            <button className='bg-[#445aa8] hover:bg-[#566cba] p-1 px-2 rounded-md transition-all' onClick={()=> openEdit(inven.id)}>
+                                                <Edit className="text-white"/>
+                                            </button>
 
-                                        <button className='bg-[#a84444] hover:bg-[#ba5656] p-1 px-2 rounded-md transition-all' onClick={()=> openDelete()}>
-                                            <Trash className="text-white"/>
-                                        </button>
-                                    </div>
-                                </td>                                
-                            </tr>
+                                            <button className='bg-[#a84444] hover:bg-[#ba5656] p-1 px-2 rounded-md transition-all' onClick={()=> openDelete(inven.id)}>
+                                                <Trash className="text-white"/>
+                                            </button>
+                                        </div>
+                                    </td>                                
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
