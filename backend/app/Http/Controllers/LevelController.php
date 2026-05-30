@@ -8,9 +8,20 @@ use Illuminate\Http\Request;
 
 class LevelController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $level = Level::all();
+        $query = Level::query();
+
+        if($request->filled('search')){
+            $search = $request->search;
+
+            $query->where(function ($e) use ($search) {
+                $e->where('name' , 'like' , "%$search%")
+                ->orWhere('description' , 'like' , "%$search%");
+            });
+        }
+
+        $level = $query->with('level_feature')->paginate(10);
 
         try{
             return response()->json([

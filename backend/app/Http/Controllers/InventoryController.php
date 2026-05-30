@@ -7,9 +7,23 @@ use Illuminate\Http\Request;
 
 class InventoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $inventory = Inventory::with('room')->get();
+        $query = Inventory::query();
+
+        if($request->filled('search')){
+            $search = $request->search;
+
+            $query->where(function ($e) use ($search) {
+                $e->where('name', 'like', "%$search%")
+                ->orWhere('description', 'like', "%$search%")
+                ->orWhereHas('room', function ($room) use ($search) {
+                    $room->where('name', 'like', "%$search");
+                });
+            });
+        }
+
+        $inventory = $query->with('room')->paginate(10);
 
         try{
             return response()->json([

@@ -7,9 +7,22 @@ use Illuminate\Http\Request;
 
 class StaffController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $staff = Staff::all();
+        $query = Staff::query();
+
+        if($request->filled('search')){
+            $search = $request->search;
+
+            $query->where(function ($e) use ($search) {
+                $e->where('name', 'like', "%$search%")
+                ->orWhere('email', 'like', "%$search%")
+                ->orWhere('phone', 'like', "%$search%")
+                ->orWhere('role', 'like', "%$search%");
+            });
+        }
+
+        $staff = $query->paginate(10);
 
         try{
             return response()->json([

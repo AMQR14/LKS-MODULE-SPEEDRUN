@@ -1,4 +1,4 @@
-import { Edit, Plus, Trash, X } from "lucide-react"
+import { Edit, MoveLeft, MoveRight, Plus, Trash, X } from "lucide-react"
 import AdminLayout from "../../layouts/AdminLayout"
 import Modal from "../../Modal/Modal"
 import {Link} from 'react-router-dom'
@@ -8,12 +8,28 @@ import api from "../../lib/api"
 export default function AdminUser(){
     const [users, setUsers] = useState([])
     const [loading, setLoading] = useState(false)
+    const [page, setPage] = useState(1)
+    const [last, setLast] = useState('')
+
+    //Search
+    const [search, setSearch] = useState('')
+
+    const putSearch = (e) =>(
+        setSearch(e.target.value),
+        setPage(1)
+    )
 
     async function fetchAllUser() {
         setLoading(true)
         try{
-            const res = await api.get('/user')
-            setUsers(res.data.users)
+            const res = await api.get('/user', {
+                params: {
+                    page,
+                    search
+                }
+            })
+            setUsers(res.data.users.data)
+            setLast(res.data.users.last_page)
         }finally{
             setLoading(false)
         }
@@ -21,7 +37,7 @@ export default function AdminUser(){
 
     useEffect(()=>{
         fetchAllUser()
-    }, [])
+    }, [page, search])
 
 
     //Create
@@ -134,17 +150,6 @@ export default function AdminUser(){
         }
     }
 
-    //Search
-    const [search, setSearch] = useState('')
-
-    const putSearch = (e) =>(
-        setSearch(e.target.value)
-    )
-
-    const filter = users.filter((user)=>(
-        user.username.toLowerCase().includes(search.toLocaleLowerCase())
-    ))
-
     return (
         <AdminLayout>
             {create 
@@ -248,24 +253,24 @@ export default function AdminUser(){
                         </button>
                     </div>
                 </div>
-                <div className="mt-4 border-2 border-[#3a384f] overflow-auto">
-                    <table className="w-full">
-                        <thead className="border-b-2 border-[#3a384f] bg-[#6a6981] text-[#323047]">
-                            <tr>
-                                <th className="border-r-2 border-[#3a384f] p-1">No</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">Username</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">Email</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">Created At</th>
+                <div className="mt-4 border-2 border-[#3a384f] overflow-auto rounded-md">
+                    <table className="w-full divide-y-2 divide-[#3a384f]">
+                        <thead className=" bg-[#6a6981] text-[#323047]">
+                            <tr className="divide-x-2 divide-[#3a384f]">
+                                <th className="p-1">No</th>
+                                <th className="p-1">Username</th>
+                                <th className="p-1">Email</th>
+                                <th className="p-1">Created At</th>
                                 <th >Action</th>
                             </tr>
                         </thead>
-                        <tbody >
-                            {filter.map((user,index)=>(
-                                <tr className="border-b-2 border-[#3a384f]" key={users.id}>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{index + 1}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{user.username}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{user.email}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{user.created_at}</td>
+                        <tbody className=" divide-y-2 divide-[#3a384f] *:odd:bg-[#cfcee0]">
+                            {users.map((user,index)=>(
+                                <tr className=" border-[#3a384f]  divide-x-2 divide-[#3a384f]" key={users.id}>
+                                    <td className="p-1">{index + 1}</td>
+                                    <td className="p-1">{user.username}</td>
+                                    <td className="p-1">{user.email}</td>
+                                    <td className="p-1">{user.created_at.slice(0, 10)}</td>
                                     <td className="w-20">
                                         <div className="flex p-1 gap-2">
                                             <button className='bg-[#445aa8] hover:bg-[#566cba] p-1 px-2 rounded-md transition-all' onClick={()=> openEdit(user.id)}>
@@ -281,6 +286,21 @@ export default function AdminUser(){
                             ))}
                         </tbody>
                     </table>
+                </div>
+                <div className="border-2 h-11 mt-2 rounded-md flex items-center overflow-hidden w-fit">
+                    <div className="px-3 bg-[#6a6981] hover:bg-[#5e5d76] transition-all h-full flex items-center text-white" onClick={()=> page > 1 ? setPage(page - 1) : ''}>
+                        <MoveLeft/>
+                    </div>
+
+                    <div className="flex h-full items-center justify-center">
+                        {[...Array(last)].map((e, index)=>(
+                            <div className={` ${page == index + 1 ? 'bg-gray-200 font-semibold' : '' } px-5 hover:bg-gray-200 flex items-center h-full`} onClick={()=> page != index + 1 ? setPage(index+1) : ''}>{index + 1}</div>
+                        ))}
+                    </div>
+                    
+                    <div className="px-3 bg-[#6a6981] hover:bg-[#5e5d76] transition-all h-full flex items-center text-white" onClick={()=>  page != last ? setPage(page + 1) : ''}>
+                        <MoveRight/>
+                    </div>
                 </div>
             </div>
         </AdminLayout>

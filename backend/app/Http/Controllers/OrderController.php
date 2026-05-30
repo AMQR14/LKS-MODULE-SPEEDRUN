@@ -7,9 +7,24 @@ use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $order = Order::with('user', 'level')->get();
+        $query = Order::query();
+
+        if($request->filled('search')){
+            $search = $request->search;
+
+            $query->where(function ($e) use ($search) {
+                $e->whereHas('user', function ($user) use ($search) {
+                    $user->where('username', 'like', "%$search%");
+                });
+            })
+            ->orWhereHas('level', function ($level) use ($search) {
+                $level->where('name', 'like' , "%{$search}%");
+            });
+        }
+
+        $order = $query->with('user', 'level')->paginate(10);
 
         try{
             return response()->json([

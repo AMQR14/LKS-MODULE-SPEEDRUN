@@ -1,4 +1,4 @@
-import { Edit, Plus, Trash, X } from "lucide-react"
+import { Edit, MoveLeft, MoveRight, Plus, Trash, X } from "lucide-react"
 import AdminLayout from "../../layouts/AdminLayout"
 import Modal from "../../Modal/Modal"
 import {Link} from 'react-router-dom'
@@ -12,12 +12,26 @@ export default function AdminOrder(){
 
     const [orders, setOrders] = useState([])
     const [loading, setLoading] = useState(false)
+    const [page, setPage] = useState(1)
+    const [last, setLast] = useState('')
+    //Search
+    const [search, setSearch] = useState('')
+
+    const putSearch = (e) =>(
+        setSearch(e.target.value)
+    )
 
     async function fetchAllOrder() {
         setLoading(true)
         try{
-            const res = await api.get('/order')
-            setOrders(res.data.orders)
+            const res = await api.get(`/order`, {
+                params : {
+                    page,
+                    search
+                }
+            })
+            setOrders(res.data.orders.data)
+            setLast(res.data.orders.last_page)
         }finally{
             setLoading(false)
         }
@@ -25,7 +39,7 @@ export default function AdminOrder(){
 
     useEffect(()=>{
         fetchAllOrder()
-    }, [])
+    }, [page, search])
 
 
     //Create
@@ -151,24 +165,13 @@ export default function AdminOrder(){
         }
     }
 
-    //Search
-    const [search, setSearch] = useState('')
-
-    const putSearch = (e) =>(
-        setSearch(e.target.value)
-    )
-
-    const filter = orders.filter((order)=>(
-        order.user.username.toLowerCase().includes(search.toLocaleLowerCase())
-    ))
-
     //Level
     const [levels, setLevels] = useState([])
 
     async function fetchLevel() {
         try{
             const res = await api.get('/level')
-            setLevels(res.data.levels)
+            setLevels(res.data.levels.data)
         }finally{
 
         }
@@ -246,8 +249,8 @@ export default function AdminOrder(){
                             <label htmlFor="" className="font-semibold">Status:</label>
                             <select name="" id=""className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]" onChange={e => setFormCreate({...formCreate, status:e.target.value})}>
                                 <option value="" selected disabled>Select Status</option>
-                                <option value="Occupied" >Occupied</option>
-                                <option value="Not Occupied" >Not Occupied</option>
+                                <option value="Complete" >Complete</option>
+                                <option value="Not Complete" >Not Complete</option>
                             </select>
                             {errorCreate.status && <p className="text-red-500">{errorCreate.status[0]}</p>}
                         </div>
@@ -293,8 +296,8 @@ export default function AdminOrder(){
                             <label htmlFor="" className="font-semibold">Status:</label>
                             <select name="" id=""className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]" onChange={e => setFormEdit({...formEdit, status:e.target.value})}>
                                 <option value="" selected disabled>Select Status</option>
-                                <option value="Occupied" selected={formEdit.status == 'Occupied'}>Occupied</option>
-                                <option value="Not Occupied" selected={formEdit.status == 'Not Occupied'}>Not Occupied</option>
+                                <option value="Complete" selected={formEdit.status == 'Complete'}>Complete</option>
+                                <option value="Not Complete" selected={formEdit.status == 'Not Complete'}>Not Complete</option>
                             </select>
                             {errorEdit.status && <p className="text-red-500">{errorEdit.status[0]}</p>}
                         </div>
@@ -334,34 +337,34 @@ export default function AdminOrder(){
                 <div className="flex items-center justify-between">
                     <p className="font-semibold text-xl">Level</p>
                     <div className="flex gap-2">
-                        <input type="text" placeholder="Search..." className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]"/>
+                        <input type="text" placeholder="Search..." className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]" value={search} onChange={putSearch}/>
                         <button className='bg-[#47455b] hover:bg-[#525068] p-2 px-3 rounded-md transition-all' onClick={()=> openCreate()}>
                             <Plus className="text-white"/>
                         </button>
                     </div>
                 </div>
-                <div className="mt-4 border-2 border-[#3a384f] overflow-auto">
-                    <table className="w-full">
-                        <thead className="border-b-2 border-[#3a384f] bg-[#6a6981] text-[#323047]">
-                            <tr>
-                                <th className="border-r-2 border-[#3a384f] p-1">No</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">User</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">Level</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">Time</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">Price Payed</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">Status</th>
+                <div className="mt-4 border-2  border-[#3a384f] overflow-auto rounded-md">
+                    <table className="w-full divide-y-2 divide-[#3a384f]">
+                        <thead className="border-b-2 bg-[#6a6981] text-[#323047]">
+                            <tr className="divide-x-2 divide-[#3a384f]">
+                                <th className=" p-1">No</th>
+                                <th className=" p-1">User</th>
+                                <th className=" p-1">Level</th>
+                                <th className=" p-1">Time</th>
+                                <th className=" p-1">Price Payed</th>
+                                <th className=" p-1">Status</th>
                                 <th >Action</th>
                             </tr>
                         </thead>
-                        <tbody >
-                            {filter.map((order, index)=>(
-                                <tr className="border-b-2 border-[#3a384f]" key={order.is}> 
-                                    <td className="border-r-2 border-[#3a384f] p-1">{index + 1}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{order.user.username}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{order.level.name}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{order.time}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">${order.price_payed}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{order.status}</td>
+                        <tbody className="divide-y-2 divide-[#3a384f] *:odd:bg-[#cfcee0]">
+                            {orders.map((order, index)=>(
+                                <tr className="divide-x-2 divide-[#3a384f]" key={order.is}> 
+                                    <td className=" p-1">{index + 1}</td>
+                                    <td className=" p-1">{order.user.username}</td>
+                                    <td className=" p-1">{order.level.name}</td>
+                                    <td className=" p-1">{order.time} (hour/s)</td>
+                                    <td className=" p-1">${order.price_payed}</td>
+                                    <td className=" p-1">{order.status}</td>
                                     <td className="w-20">
                                         <div className="flex p-1 gap-2">
                                             <button className='bg-[#445aa8] hover:bg-[#566cba] p-1 px-2 rounded-md transition-all' onClick={()=> openEdit(order.id)}>
@@ -378,6 +381,21 @@ export default function AdminOrder(){
                             
                         </tbody>
                     </table>
+                </div>
+                <div className="border-2 h-11 mt-2 rounded-md flex items-center overflow-hidden w-fit">
+                    <div className="px-3 bg-[#6a6981] hover:bg-[#5e5d76] transition-all h-full flex items-center text-white" onClick={()=> page > 1 ? setPage(page - 1) : ''}>
+                        <MoveLeft/>
+                    </div>
+
+                    <div className="flex h-full items-center justify-center">
+                        {[...Array(last)].map((e, index)=>(
+                            <div className={` ${page == index + 1 ? 'bg-gray-200 font-semibold' : '' } px-5 hover:bg-gray-200 flex items-center h-full`} onClick={()=> page != index + 1 ? setPage(index+1) : ''}>{index + 1}</div>
+                        ))}
+                    </div>
+                    
+                    <div className="px-3 bg-[#6a6981] hover:bg-[#5e5d76] transition-all h-full flex items-center text-white" onClick={()=>  page != last ? setPage(page + 1) : ''}>
+                        <MoveRight/>
+                    </div>
                 </div>
             </div>
         </AdminLayout>

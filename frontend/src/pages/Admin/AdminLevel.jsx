@@ -1,4 +1,4 @@
-import { Edit, Plus, Trash, X } from "lucide-react"
+import { Edit, MoveLeft, MoveRight, Plus, Trash, X } from "lucide-react"
 import AdminLayout from "../../layouts/AdminLayout"
 import Modal from "../../Modal/Modal"
 import {Link} from 'react-router-dom'
@@ -8,12 +8,27 @@ import api from "../../lib/api"
 export default function AdminLevel(){
     const [levels, setLevels] = useState([])
     const [loading, setLoading] = useState(false)
+    const [page, setPage] = useState(1)
+    const [last, setLast] = useState('')
+
+    //Search
+    const [search, setSearch] = useState('')
+
+    const putSearch = (e) =>(
+        setSearch(e.target.value)
+    )
 
     async function fetchAllLevel() {
         setLoading(true)
         try{
-            const res = await api.get('/level')
-            setLevels(res.data.levels)
+            const res = await api.get(`/level`, {
+                params: {
+                    page,
+                    search
+                }
+            })
+            setLevels(res.data.levels.data)
+            setLast(res.data.levels.last_page)
         }finally{
             setLoading(false)
         }
@@ -21,7 +36,7 @@ export default function AdminLevel(){
 
     useEffect(()=>{
         fetchAllLevel()
-    }, [])
+    }, [page, search])
 
 
     //Create
@@ -144,17 +159,6 @@ export default function AdminLevel(){
         }
     }
 
-    //Search
-    const [search, setSearch] = useState('')
-
-    const putSearch = (e) =>(
-        setSearch(e.target.value)
-    )
-
-    const filter = levels.filter((level)=>(
-        level.name.toLowerCase().includes(search.toLocaleLowerCase())
-    ))
-
     //Feature
     const [features, setFeatures] = useState([])
     const [curFeature, setCurFeature] = useState('')
@@ -268,7 +272,7 @@ export default function AdminLevel(){
                             ))}
                             {errorCreate.feature && <p className="text-red-500">{errorCreate.feature[0]}</p>}
                         </div>
-                            <button className='bg-[#47455b] hover:bg-[#525068] mt-6 p-3 px-3 rounded-md transition-all text-white w-full' onClick={handleEdit}>Create</button>
+                            <button className='bg-[#47455b] hover:bg-[#525068] mt-6 p-3 px-3 rounded-md transition-all text-white w-full' onClick={handleEdit}>Save</button>
                     </form>
                 </div>
             </Modal> : ''}
@@ -306,24 +310,26 @@ export default function AdminLevel(){
                         </button>
                     </div>
                 </div>
-                <div className="mt-4 border-2 border-[#3a384f] overflow-auto">
-                    <table className="w-full">
-                        <thead className="border-b-2 border-[#3a384f] bg-[#6a6981] text-[#323047]">
-                            <tr>
-                                <th className="border-r-2 border-[#3a384f] p-1">No</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">Name</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">Description</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">Price</th>
+                <div className="mt-4 border-2 border-[#3a384f] overflow-auto rounded-md">
+                    <table className="w-full divide-y-2 divide-[#3a384f]">
+                        <thead className="bg-[#6a6981] text-[#323047] ">
+                            <tr className="divide-x-2 divide-[#3a384ff]">
+                                <th className="p-1">No</th>
+                                <th className="p-1">Name</th>
+                                <th className="p-1">Description</th>
+                                <th className="p-1">Price</th>
+                                <th className="p-1">Features</th>
                                 <th >Action</th>
                             </tr>
                         </thead>
-                        <tbody >
-                            {filter.map((level, index)=>(
-                                <tr className="border-b-2 border-[#3a384f]" key={level.id}>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{index + 1}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{level.name}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{level.description}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">${level.price}</td>
+                        <tbody className="*:odd:bg-[#d5d4e6] divide-y-2 divide-[#3a384ff]">
+                            {levels.map((level, index)=>(
+                                <tr className="divide-x-2 divide-[#3a384ff]" key={level.id}>
+                                    <td className="p-1">{index + 1}</td>
+                                    <td className="p-1">{level.name}</td>
+                                    <td className="p-1">{level.description}</td>
+                                    <td className="p-1">${level.price}</td>
+                                    <td className="p-1 text-nowrap overflow-auto w-10 max-w-100 ">{level.level_feature.map((e, index)=> index == 0 ? e.name : ', ' + e.name )}</td>
                                     <td className="w-20">
                                         <div className="flex p-1 gap-2">
                                             <button className='bg-[#445aa8] hover:bg-[#566cba] p-1 px-2 rounded-md transition-all' onClick={()=> openEdit(level.id)}>
@@ -339,6 +345,21 @@ export default function AdminLevel(){
                             ))}
                         </tbody>
                     </table>
+                </div>
+                <div className="border-2 h-11 mt-2 rounded-md flex items-center overflow-hidden w-fit">
+                    <div className="px-3 bg-[#6a6981] hover:bg-[#5e5d76] transition-all h-full flex items-center text-white" onClick={()=> page > 1 ? setPage(page - 1) : ''}>
+                        <MoveLeft/>
+                    </div>
+
+                    <div className="flex h-full items-center justify-center">
+                        {[...Array(last)].map((e, index)=>(
+                            <div className={` ${page == index + 1 ? 'bg-gray-200 font-semibold' : '' } px-5 hover:bg-gray-200 flex items-center h-full`} onClick={()=> page != index + 1 ? setPage(index+1) : ''}>{index + 1}</div>
+                        ))}
+                    </div>
+                    
+                    <div className="px-3 bg-[#6a6981] hover:bg-[#5e5d76] transition-all h-full flex items-center text-white" onClick={()=>  page != last ? setPage(page + 1) : ''}>
+                        <MoveRight/>
+                    </div>
                 </div>
             </div>
         </AdminLayout>

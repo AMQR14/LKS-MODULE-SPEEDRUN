@@ -1,4 +1,4 @@
-import { Edit, Plus, Trash, X } from "lucide-react"
+import { Edit, MoveLeft, MoveRight, Plus, Trash, X } from "lucide-react"
 import AdminLayout from "../../layouts/AdminLayout"
 import Modal from "../../Modal/Modal"
 import {Link} from 'react-router-dom'
@@ -8,20 +8,37 @@ import api from "../../lib/api"
 export default function AdminInventory(){
     const [inventorys, setInventorys] = useState([])
     const [loading, setLoading] = useState(false)
+    const [page, setPage] = useState(1)
+    const [last, setLast] = useState('')
+
+    //Search
+    const [search, setSearch] = useState('')
+
+    const putSearch = (e) =>(
+        setSearch(e.target.value)
+    )
 
     async function fetchAllInventory() {
         setLoading(true)
         try{
-            const res = await api.get('/inventory')
-            setInventorys(res.data.inventories)
+            const res = await api.get(`/inventory`, {
+                params : {
+                    page,
+                    search
+                }
+            })
+            setInventorys(res.data.inventories.data)
+            setLast(res.data.inventories.last_page)
         }finally{
             setLoading(false)
         }
     }
 
     useEffect(()=>{
-        fetchAllInventory()
-    }, [])
+        if(page){
+            fetchAllInventory()
+        }
+    }, [page, search])
 
 
     //Create
@@ -142,16 +159,8 @@ export default function AdminInventory(){
         }
     }
 
-    //Search
-    const [search, setSearch] = useState('')
+    
 
-    const putSearch = (e) =>(
-        setSearch(e.target.value)
-    )
-
-    const filter = inventorys.filter((inventory)=>(
-        inventory.name.toLowerCase().includes(search.toLocaleLowerCase())
-    ))
 
     //Room
     const [rooms, setRooms]= useState([])
@@ -159,7 +168,8 @@ export default function AdminInventory(){
     async function fetchRoom() {
         try{
             const res = await api.get('/room')
-            setRooms(res.data.rooms)
+            setRooms(res.data.rooms.data)
+            console.log(res.data.rooms.data)
         }finally{
 
         }
@@ -186,9 +196,9 @@ export default function AdminInventory(){
                     </div>
                     <form action="" className="gap-4 flex flex-col w-100" onSubmit={handleCreate}>
                         <div className="flex flex-col gap-2">
-                            <label htmlFor="" className="font-semibold">Inventory:</label>
+                            <label htmlFor="" className="font-semibold">Room:</label>
                             <select name="" id=""className="border-2 p-2 border-gray-200 transition-all focus:outline-none rounded-md hover:border-[#525068]" onChange={e => setFormCreate({...formCreate, room_id:e.target.value})}>
-                                <option value="" selected disabled>Select Inventory</option>
+                                <option value="" selected disabled>Select Room</option>
                                 {rooms.map((room)=>(
                                     <option value={room.id}>{room.name}</option>
                                 ))}
@@ -319,28 +329,28 @@ export default function AdminInventory(){
                         </button>
                     </div>
                 </div>
-                <div className="mt-4 border-2 border-[#3a384f] overflow-auto">
-                    <table className="w-full">
-                        <thead className="border-b-2 border-[#3a384f] bg-[#6a6981] text-[#323047]">
-                            <tr>
-                                <th className="border-r-2 border-[#3a384f] p-1">No</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">Room</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">Name</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">Description</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">Quantity</th>
-                                <th className="border-r-2 border-[#3a384f] p-1">Status</th>
+                <div className="mt-4 border-2 rounded-md border-[#3a384f] overflow-auto">
+                    <table className="w-full divide-y-2 divide-[#3a384f]">
+                        <thead className=" border-[#3a384f] bg-[#6a6981] text-[#323047]">
+                            <tr className="divide-x-2 divide-[#3a384f]">
+                                <th className="p-1">No</th>
+                                <th className="p-1">Room</th>
+                                <th className="p-1">Name</th>
+                                <th className="p-1">Description</th>
+                                <th className="p-1">Quantity</th>
+                                <th className="p-1">Status</th>
                                 <th >Action</th>
                             </tr>
                         </thead>
-                        <tbody >
-                            {filter.map((inven, index)=>(
-                                <tr className="border-b-2 border-[#3a384f]" key={inven.id}>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{index + 1}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{inven.room.name}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{inven.name}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{inven.description}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{inven.quantity}</td>
-                                    <td className="border-r-2 border-[#3a384f] p-1">{inven.status}</td>
+                        <tbody className="*:odd:bg-[#cfcee0] divide-y-2 divide-[#3a384f]">
+                            {inventorys.map((inven, index)=>(
+                                <tr className=" border-[#3a384f] divide-x-2 divide-[#3a384f]" key={inven.id}>
+                                    <td className="p-1">{index + 1}</td>
+                                    <td className="p-1">{inven.room.name}</td>
+                                    <td className="p-1">{inven.name}</td>
+                                    <td className="p-1">{inven.description}</td>
+                                    <td className="p-1">{inven.quantity}</td>
+                                    <td className="p-1">{inven.status}</td>
                                     <td className="w-20">
                                         <div className="flex p-1 gap-2">
                                             <button className='bg-[#445aa8] hover:bg-[#566cba] p-1 px-2 rounded-md transition-all' onClick={()=> openEdit(inven.id)}>
@@ -356,6 +366,21 @@ export default function AdminInventory(){
                             ))}
                         </tbody>
                     </table>
+                </div>
+                <div className="border-2 h-11 mt-2 rounded-md flex items-center overflow-hidden w-fit">
+                    <div className="px-3 bg-[#6a6981] hover:bg-[#5e5d76] transition-all h-full flex items-center text-white" onClick={()=> page > 1 ? setPage(page - 1) : ''}>
+                        <MoveLeft/>
+                    </div>
+
+                    <div className="flex h-full items-center justify-center">
+                        {[...Array(last)].map((e, index)=>(
+                            <div className={` ${page == index + 1 ? 'bg-gray-200 font-semibold' : '' } px-5 hover:bg-gray-200 flex items-center h-full`} onClick={()=> page != index + 1 ? setPage(index+1) : ''}>{index + 1}</div>
+                        ))}
+                    </div>
+                    
+                    <div className="px-3 bg-[#6a6981] hover:bg-[#5e5d76] transition-all h-full flex items-center text-white" onClick={()=>  page != last ? setPage(page + 1) : ''}>
+                        <MoveRight/>
+                    </div>
                 </div>
             </div>
         </AdminLayout>
